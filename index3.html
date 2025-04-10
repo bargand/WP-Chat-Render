@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp Chat Renderer</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #ece5dd;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .upload-area {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .upload-btn {
+      background-color: #075e54;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: inline-block;
+      margin-top: 10px;
+    }
+    .chat {
+      background-color: white;
+      border-radius: 10px;
+      padding: 20px;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .message {
+      max-width: 70%;
+      padding: 10px;
+      margin: 10px;
+      border-radius: 10px;
+      position: relative;
+      clear: both;
+    }
+    .from-me {
+      background-color: #dcf8c6;
+      float: right;
+      text-align: right;
+    }
+    .from-them {
+      background-color: #fff;
+      float: left;
+    }
+    .sender {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .timestamp {
+      font-size: 0.8em;
+      color: #999;
+      margin-top: 5px;
+      display: block;
+    }
+    .date-separator {
+      text-align: center;
+      margin: 20px 0;
+      font-weight: bold;
+      color: #666;
+    }
+    .notification {
+      text-align: center;
+      font-size: 0.9em;
+      color: #777;
+      margin: 10px 0;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #555;
+    }
+    .error-message {
+      color: red;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="upload-area">
+      <h2>WhatsApp Chat Renderer</h2>
+      <input type="file" id="fileInput" accept=".txt,.zip" style="display: none;" />
+      <label for="fileInput" class="upload-btn">
+        <i class="fas fa-cloud-upload-alt"></i> Choose WhatsApp Export
+      </label>
+      <p style="font-size: 12px; margin-top: 10px;">Supports .txt or .zip files exported from WhatsApp</p>
+    </div>
+    <div class="chat" id="chat">
+      <div class="empty-state">
+        <i class="fas fa-comments"></i>
+        <p>Upload a WhatsApp chat export to view messages</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const fileInput = document.getElementById('fileInput');
+
+      fileInput.addEventListener('change', async function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const chat = document.getElementById('chat');
+        chat.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Loading chat...</p></div>';
+
+        try {
+          let text = '';
+          if (file.name.endsWith('.zip')) {
+            const zip = await JSZip.loadAsync(file);
+            const txtFileName = Object.keys(zip.files).find(name => name.endsWith('.txt'));
+            if (!txtFileName) throw new Error('No WhatsApp chat file found in the ZIP');
+            text = await zip.files[txtFileName].async('string');
+          } else {
+            text = await file.text();
+          }
+
+          const messages = parseChat(text);
+          renderMessages(messages);
+        } catch (error) {
+          showError(error.message);
+        }
+      });
+    });
+
+    function parseChat(text) {
+      const lines = text.split(/\r?\n/);
+      const messages = [];
+      let currentDate = '';
+      let myName = null;
+
+      const msgPattern = /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}),?\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][mM])?)\s[-\s]\s([^:]+):\s([\s\S]*)$/;
+      const sysPattern = /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}),?\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][mM])?)\s[-\s]\s(.+)$/;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line) continue;
+
+        if (line.includes('Messages to this chat and calls are now secured with end-to-end encryption')) continue;
+
+        const msgMatch = line.match(msgPattern);
+        if (msgMatch) {
+          const [_, date, time, sender, message] = msgMatch;
+          if (!myName && sender !== 'You') myName = sender;
+          const isYou = myName && sender === myName;
+          if (date !== currentDate) {
+            currentDate = date;
+            messages.push({ type: 'date', date });
+          }
+          messages.push({ type: 'message', date, time, sender, message, isYou });
+          continue;
+        }
+
+        const sysMatch = line.match(sysPattern);
+        if (sysMatch && !line.includes(':')) {
+          const [_, date, time, message] = sysMatch;
+          if (date !== currentDate) {
+            currentDate = date;
+            messages.push({ type: 'date', date });
+          }
+          messages.push({ type: 'system', date, time, message });
+          continue;
+        }
+
+        if (messages.length > 0 && messages[messages.length - 1].type === 'message') {
+          messages[messages.length - 1].message += '\n' + line;
+        }
+      }
+
+      return messages;
+    }
+
+    function renderMessages(messages) {
+      const chat = document.getElementById('chat');
+      chat.innerHTML = '';
+
+      if (messages.length === 0) {
+        chat.innerHTML = '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>No messages found in this chat</p></div>';
+        return;
+      }
+
+      messages.forEach(msg => {
+        if (msg.type === 'date') {
+          const el = document.createElement('div');
+          el.className = 'date-separator';
+          el.innerHTML = `<span>${formatDate(msg.date)}</span>`;
+          chat.appendChild(el);
+        } else if (msg.type === 'system') {
+          const el = document.createElement('div');
+          el.className = 'notification';
+          el.innerHTML = `${formatMessageText(msg.message)}<div class="timestamp">${formatTime(msg.time)}</div>`;
+          chat.appendChild(el);
+        } else if (msg.type === 'message') {
+          const el = document.createElement('div');
+          el.className = 'message ' + (msg.isYou ? 'from-me' : 'from-them');
+          el.innerHTML = `
+            ${msg.isYou ? '' : `<div class="sender">${escapeHtml(msg.sender)}</div>`}
+            <div>${formatMessageText(msg.message)}</div>
+            <span class="timestamp">${formatTime(msg.time)}</span>
+          `;
+          chat.appendChild(el);
+        }
+      });
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function formatDate(dateStr) {
+      const parts = dateStr.split(/[\/\-]/);
+      if (parts.length === 3) {
+        const [day, month, year] = parts;
+        return new Date(`${year.length === 2 ? '20' + year : year}-${month}-${day}`).toLocaleDateString(undefined, {
+          weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+        });
+      }
+      return dateStr;
+    }
+
+    function formatTime(timeStr) {
+      return timeStr.replace(/:\d{2}(?=\s[APap][mM]?)/, '').replace(/\s?([APap][mM]?)/, (_, p1) => p1.toLowerCase());
+    }
+
+    function formatMessageText(text) {
+      text = escapeHtml(text);
+      text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+      text = text.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+      text = text.replace(/_(.*?)_/g, '<em>$1</em>');
+      text = text.replace(/~(.*?)~/g, '<del>$1</del>');
+      text = text.replace(/```([\s\S]*?)```/g, '<code>$1</code>');
+      return text.replace(/\n/g, '<br>');
+    }
+
+    function escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function showError(message) {
+      const chat = document.getElementById('chat');
+      chat.innerHTML = `<div class="empty-state">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div class="error-message">${message}</div>
+        <label for="fileInput" class="upload-btn">
+          <i class="fas fa-redo"></i> Try Again
+        </label>
+      </div>`;
+    }
+  </script>
+</body>
+</html>
