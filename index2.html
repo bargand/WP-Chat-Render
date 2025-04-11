@@ -222,111 +222,45 @@
       }
 
       /* Media attachment styles */
-      .media-container {
-        max-width: 100%;
-        margin: 5px 0;
-      }
-
       .media-attachment {
         max-width: 100%;
+        margin: 5px 0;
         border-radius: 5px;
         overflow: hidden;
         background-color: rgba(0, 0, 0, 0.05);
-        display: inline-block;
       }
 
-      .media-attachment img {
+      .media-attachment img,
+      .media-attachment video {
         max-width: 100%;
         max-height: 300px;
         display: block;
         object-fit: contain;
-        cursor: pointer;
-        transition: transform 0.2s;
-      }
-
-      .media-attachment img:hover {
-        transform: scale(1.02);
       }
 
       .document-attachment {
         display: flex;
         align-items: center;
-        padding: 10px;
+        padding: 8px;
         background-color: rgba(0, 0, 0, 0.05);
         border-radius: 5px;
         margin: 5px 0;
-        transition: background-color 0.2s;
       }
 
-      .document-attachment:hover {
-        background-color: rgba(0, 0, 0, 0.1);
-      }
-
-      .document-icon {
+      .document-attachment i {
         font-size: 24px;
         margin-right: 10px;
         color: var(--whatsapp-teal-green);
-        min-width: 24px;
       }
 
-      .document-info {
-        flex-grow: 1;
-        overflow: hidden;
-      }
-
-      .document-name {
+      .document-attachment a {
         color: var(--whatsapp-teal-green);
         text-decoration: none;
         word-break: break-all;
-        display: block;
-        font-weight: 500;
       }
 
-      .document-size {
-        font-size: 0.8em;
-        color: var(--whatsapp-time-gray);
-        margin-top: 2px;
-      }
-
-      .download-btn {
-        color: var(--whatsapp-teal-green);
-        margin-left: 10px;
-        cursor: pointer;
-      }
-
-      /* Media modal styles */
-      .media-modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.9);
-        z-index: 1000;
-        justify-content: center;
-        align-items: center;
-      }
-
-      .modal-content {
-        max-width: 90%;
-        max-height: 90%;
-      }
-
-      .modal-content img,
-      .modal-content video {
-        max-width: 100%;
-        max-height: 90vh;
-        display: block;
-      }
-
-      .close-modal {
-        position: absolute;
-        top: 20px;
-        right: 30px;
-        color: white;
-        font-size: 30px;
-        cursor: pointer;
+      .document-attachment a:hover {
+        text-decoration: underline;
       }
 
       /* Dark mode support */
@@ -366,10 +300,6 @@
         .media-attachment {
           background-color: rgba(255, 255, 255, 0.1);
         }
-
-        .document-attachment:hover {
-          background-color: rgba(255, 255, 255, 0.2);
-        }
       }
 
       /* Mobile responsiveness */
@@ -384,10 +314,6 @@
         .message {
           max-width: 85%;
           font-size: 15px;
-        }
-
-        .media-attachment img {
-          max-height: 200px;
         }
       }
     </style>
@@ -412,28 +338,10 @@
       </div>
     </div>
 
-    <!-- Media Modal -->
-    <div id="mediaModal" class="media-modal">
-      <span class="close-modal">&times;</span>
-      <div class="modal-content" id="modalContent"></div>
-    </div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         const fileInput = document.getElementById("fileInput");
-        const mediaModal = document.getElementById("mediaModal");
-        const modalContent = document.getElementById("modalContent");
-        const closeModal = document.querySelector(".close-modal");
-
-        // Close modal when clicking X or outside content
-        closeModal.addEventListener(
-          "click",
-          () => (mediaModal.style.display = "none")
-        );
-        mediaModal.addEventListener("click", (e) => {
-          if (e.target === mediaModal) mediaModal.style.display = "none";
-        });
 
         fileInput.addEventListener("change", async function (e) {
           const file = e.target.files[0];
@@ -460,22 +368,11 @@
               const mediaMap = new Map();
               const mediaFolder = txtFileName.split("/").slice(0, -1).join("/");
 
-              // Process all files in the ZIP
-              for (const [relativePath, file] of Object.entries(zip.files)) {
-                if (!file.dir && !relativePath.endsWith(".txt")) {
-                  const fileName = relativePath.split("/").pop();
-                  const fileExtension = fileName.split(".").pop().toLowerCase();
+              for (const [filename, file] of Object.entries(zip.files)) {
+                if (!filename.endsWith(".txt") && !file.dir) {
                   const blob = await file.async("blob");
-
-                  // Create object URL for the file
-                  const objectUrl = URL.createObjectURL(blob);
-
-                  // Store file info including size
-                  mediaMap.set(fileName, {
-                    url: objectUrl,
-                    size: blob.size,
-                    type: fileExtension,
-                  });
+                  const fileNameOnly = filename.split("/").pop();
+                  mediaMap.set(fileNameOnly, URL.createObjectURL(blob));
                 }
               }
 
@@ -490,33 +387,6 @@
             showError(error.message);
           }
         });
-
-        // Function to format file size
-        function formatFileSize(bytes) {
-          if (bytes === 0) return "0 Bytes";
-          const k = 1024;
-          const sizes = ["Bytes", "KB", "MB", "GB"];
-          const i = Math.floor(Math.log(bytes) / Math.log(k));
-          return (
-            parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-          );
-        }
-
-        // Function to open media in modal
-        function openMediaModal(mediaUrl, mediaType) {
-          modalContent.innerHTML = "";
-          if (mediaType.match(/image/)) {
-            modalContent.innerHTML = `<img src="${mediaUrl}" alt="Enlarged media">`;
-          } else if (mediaType.match(/video/)) {
-            modalContent.innerHTML = `
-            <video controls autoplay style="max-width:100%; max-height:90vh;">
-              <source src="${mediaUrl}" type="video/mp4">
-              Your browser does not support the video tag.
-            </video>
-          `;
-          }
-          mediaModal.style.display = "flex";
-        }
       });
 
       function parseChat(text) {
@@ -602,7 +472,7 @@
         // Try to extract from lines like:
         // "12/31/23, 11:59 PM - John Doe: document omitted (file attached)"
         const filenameMatch = line.match(
-          /[^/\\]+\.(jpg|jpeg|png|gif|bmp|webp|mp4|mov|avi|mkv|pdf|docx?|xlsx?|pptx?|txt|zip|rar)/i
+          /[^/\\]+\.(jpg|jpeg|png|gif|mp4|mov|avi|pdf|docx?|xlsx?|pptx?|txt)/i
         );
         if (filenameMatch) {
           return filenameMatch[0];
@@ -681,50 +551,32 @@
 
             let content = "";
             if (msg.isMedia && msg.mediaFilename) {
-              const mediaInfo = mediaMap.get(msg.mediaFilename);
-              if (mediaInfo) {
-                const { url, size, type } = mediaInfo;
-
-                if (type.match(/jpg|jpeg|png|gif|bmp|webp/)) {
+              const mediaUrl = mediaMap.get(msg.mediaFilename);
+              if (mediaUrl) {
+                if (
+                  msg.mediaFilename.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i)
+                ) {
                   // Image attachment
-                  content += `
-                  <div class="media-container">
-                    <div class="media-attachment" onclick="openMediaModal('${url}', 'image')">
-                      <img src="${url}" alt="${msg.mediaFilename}">
-                    </div>
-                  </div>
-                `;
-                } else if (type.match(/mp4|mov|avi|mkv/)) {
+                  content += `<div class="media-attachment">
+                  <img src="${mediaUrl}" alt="${msg.mediaFilename}">
+                </div>`;
+                } else if (
+                  msg.mediaFilename.match(/\.(mp4|mov|avi|mkv|webm)$/i)
+                ) {
                   // Video attachment
-                  content += `
-                  <div class="media-container">
-                    <div class="media-attachment" onclick="openMediaModal('${url}', 'video')">
-                      <video controls style="max-width:100%; max-height:300px;">
-                        <source src="${url}" type="video/mp4">
-                        Your browser does not support the video tag.
-                      </video>
-                    </div>
-                  </div>
-                `;
+                  content += `<div class="media-attachment">
+                  <video controls style="max-width:100%; max-height:300px;">
+                    <source src="${mediaUrl}" type="video/mp4">
+                    Your browser does not support the video tag.
+                  </video>
+                </div>`;
                 } else {
                   // Document/other file attachment
                   const fileIcon = getFileIcon(msg.mediaFilename);
-                  content += `
-                  <div class="document-attachment">
-                    <i class="fas ${fileIcon} document-icon"></i>
-                    <div class="document-info">
-                      <a href="${url}" download="${
-                    msg.mediaFilename
-                  }" class="document-name">${msg.mediaFilename}</a>
-                      <div class="document-size">${formatFileSize(size)}</div>
-                    </div>
-                    <a href="${url}" download="${
-                    msg.mediaFilename
-                  }" class="download-btn">
-                      <i class="fas fa-download"></i>
-                    </a>
-                  </div>
-                `;
+                  content += `<div class="document-attachment">
+                  <i class="fas ${fileIcon}"></i>
+                  <a href="${mediaUrl}" download="${msg.mediaFilename}">${msg.mediaFilename}</a>
+                </div>`;
                 }
               } else {
                 // Media file not found in ZIP
@@ -774,17 +626,6 @@
           case "wav":
           case "ogg":
             return "fa-file-audio";
-          case "jpg":
-          case "jpeg":
-          case "png":
-          case "gif":
-          case "bmp":
-            return "fa-file-image";
-          case "mp4":
-          case "mov":
-          case "avi":
-          case "mkv":
-            return "fa-file-video";
           default:
             return "fa-file-alt";
         }
@@ -844,33 +685,6 @@
         </label>
       </div>`;
       }
-
-      // Make these functions available globally for the modal
-      window.openMediaModal = function (mediaUrl, mediaType) {
-        const mediaModal = document.getElementById("mediaModal");
-        const modalContent = document.getElementById("modalContent");
-        modalContent.innerHTML = "";
-
-        if (mediaType.match(/image/)) {
-          modalContent.innerHTML = `<img src="${mediaUrl}" alt="Enlarged media">`;
-        } else if (mediaType.match(/video/)) {
-          modalContent.innerHTML = `
-          <video controls autoplay style="max-width:100%; max-height:90vh;">
-            <source src="${mediaUrl}" type="video/mp4">
-            Your browser does not support the video tag.
-          </video>
-        `;
-        }
-        mediaModal.style.display = "flex";
-      };
-
-      window.formatFileSize = function (bytes) {
-        if (bytes === 0) return "0 Bytes";
-        const k = 1024;
-        const sizes = ["Bytes", "KB", "MB", "GB"];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-      };
     </script>
   </body>
 </html>
