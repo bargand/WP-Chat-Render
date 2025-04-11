@@ -1,492 +1,586 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WhatsApp Chat Renderer</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
-    <style>
-      :root {
-        --whatsapp-green: #25d366;
-        --whatsapp-light-green: #dcf8c6;
-        --whatsapp-dark-green: #128c7e;
-        --whatsapp-teal-green: #075e54;
-        --whatsapp-blue: #34b7f1;
-        --whatsapp-gray: #ece5dd;
-        --whatsapp-dark-gray: #3c3c3c;
-        --whatsapp-light-gray: #f5f5f5;
-        --whatsapp-message-gray: #e5e5ea;
-        --whatsapp-time-gray: #9a9a9a;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp Chat Renderer</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --whatsapp-green: #25D366;
+      --whatsapp-light-green: #DCF8C6;
+      --whatsapp-dark-green: #128C7E;
+      --whatsapp-teal-green: #075E54;
+      --whatsapp-blue: #34B7F1;
+      --whatsapp-gray: #ECE5DD;
+      --whatsapp-dark-gray: #3C3C3C;
+      --whatsapp-light-gray: #F5F5F5;
+      --whatsapp-message-gray: #E5E5EA;
+      --whatsapp-time-gray: #9A9A9A;
+    }
 
+    body {
+      font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+      background-color: #e5ddd5;
+      background-image: url("data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 800 800' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Cpath d='M400 0c-8.837 0-16 7.163-16 16v16c0 8.837 7.163 16 16 16s16-7.163 16-16V16c0-8.837-7.163-16-16-16zm0 752c-8.837 0-16 7.163-16 16v16c0 8.837 7.163 16 16 16s16-7.163 16-16v-16c0-8.837-7.163-16-16-16zM16 384c-8.837 0-16 7.163-16 16v16c0 8.837 7.163 16 16 16h16c8.837 0 16-7.163 16-16v-16c0-8.837-7.163-16-16-16H16zm752 0c-8.837 0-16 7.163-16 16v16c0 8.837 7.163 16 16 16h16c8.837 0 16-7.163 16-16v-16c0-8.837-7.163-16-16-16h-16z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      margin: 0;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background-color: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+      height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .upload-area {
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+      background-color: var(--whatsapp-teal-green);
+      color: white;
+    }
+    
+    .upload-btn {
+      background-color: white;
+      color: var(--whatsapp-teal-green);
+      padding: 10px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 500;
+      display: inline-block;
+      margin-top: 10px;
+      transition: all 0.2s ease;
+    }
+    
+    .upload-btn:hover {
+      background-color: var(--whatsapp-light-gray);
+      transform: translateY(-2px);
+    }
+    
+    #fileInput {
+      display: none;
+    }
+    
+    .chat {
+      flex: 1;
+      padding: 10px 15px;
+      overflow-y: auto;
+      background-color: var(--whatsapp-gray);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .message {
+      max-width: 80%;
+      margin: 5px 0;
+      padding: 8px 12px;
+      border-radius: 7.5px;
+      position: relative;
+      word-wrap: break-word;
+      line-height: 1.4;
+      font-size: 14.2px;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .from-me {
+      background-color: var(--whatsapp-light-green);
+      align-self: flex-end;
+      margin-right: 10px;
+      border-top-right-radius: 0;
+    }
+    
+    .from-them {
+      background-color: white;
+      align-self: flex-start;
+      margin-left: 10px;
+      border-top-left-radius: 0;
+    }
+    
+    .timestamp {
+      display: inline-block;
+      font-size: 0.7em;
+      color: var(--whatsapp-time-gray);
+      margin-left: 8px;
+      float: right;
+      position: relative;
+      bottom: -2px;
+    }
+    
+    .sender {
+      font-weight: bold;
+      margin-bottom: 3px;
+      color: var(--whatsapp-teal-green);
+    }
+    
+    .date-separator {
+      text-align: center;
+      margin: 15px 0;
+      position: relative;
+    }
+    
+    .date-separator::before, .date-separator::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 30%;
+      height: 1px;
+      background-color: #ccc;
+    }
+    
+    .date-separator::before {
+      left: 0;
+    }
+    
+    .date-separator::after {
+      right: 0;
+    }
+    
+    .date-separator span {
+      background-color: white;
+      padding: 4px 10px;
+      border-radius: 15px;
+      font-size: 12px;
+      color: var(--whatsapp-dark-gray);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    .notification {
+      background-color: white;
+      padding: 8px;
+      border-radius: 8px;
+      margin: 10px auto;
+      text-align: center;
+      font-size: 12px;
+      color: var(--whatsapp-dark-gray);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      max-width: 80%;
+    }
+    
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--whatsapp-dark-gray);
+    }
+    
+    .loading .fa-spinner {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: var(--whatsapp-teal-green);
+    }
+    
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--whatsapp-dark-gray);
+      text-align: center;
+    }
+    
+    .empty-state i {
+      font-size: 48px;
+      margin-bottom: 20px;
+      color: var(--whatsapp-teal-green);
+    }
+    
+    .empty-state p {
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    
+    .error-message {
+      color: #d32f2f;
+      text-align: center;
+      padding: 10px;
+      font-size: 14px;
+    }
+
+    /* Media attachment styles */
+    .media-attachment {
+      max-width: 100%;
+      margin: 5px 0;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    
+    .media-attachment img {
+      max-width: 100%;
+      max-height: 300px;
+      display: block;
+      object-fit: contain;
+    }
+    
+    .document-attachment {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      background-color: rgba(0,0,0,0.05);
+      border-radius: 5px;
+      margin: 5px 0;
+    }
+    
+    .document-attachment i {
+      font-size: 24px;
+      margin-right: 10px;
+      color: var(--whatsapp-teal-green);
+    }
+    
+    .document-attachment a {
+      color: var(--whatsapp-teal-green);
+      text-decoration: none;
+      word-break: break-all;
+    }
+    
+    .document-attachment a:hover {
+      text-decoration: underline;
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
       body {
-        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
-        background-color: #e5ddd5;
-        background-image: url("data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 800 800' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Cpath d='M400 0c-8.837 0-16 7.163-16 16v16c0 8.837 7.163 16 16 16s16-7.163 16-16V16c0-8.837-7.163-16-16-16zm0 752c-8.837 0-16 7.163-16 16v16c0 8.837 7.163 16 16 16s16-7.163 16-16v-16c0-8.837-7.163-16-16-16zM16 384c-8.837 0-16 7.163-16 16v16c0 8.837 7.163 16 16 16h16c8.837 0 16-7.163 16-16v-16c0-8.837-7.163-16-16-16H16zm752 0c-8.837 0-16 7.163-16 16v16c0 8.837 7.163 16 16 16h16c8.837 0 16-7.163 16-16v-16c0-8.837-7.163-16-16-16h-16z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-        margin: 0;
-        padding: 20px;
+        background-color: #0a0a0a;
       }
-
+      
       .container {
-        max-width: 600px;
-        margin: auto;
-        background-color: white;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
-        height: 90vh;
-        display: flex;
-        flex-direction: column;
+        background-color: #111;
       }
-
-      .upload-area {
-        padding: 20px;
-        text-align: center;
-        border-bottom: 1px solid #ddd;
-        background-color: var(--whatsapp-teal-green);
-        color: white;
-      }
-
-      .upload-btn {
-        background-color: white;
-        color: var(--whatsapp-teal-green);
-        padding: 10px 20px;
-        border-radius: 20px;
-        cursor: pointer;
-        font-weight: 500;
-        display: inline-block;
-        margin-top: 10px;
-        transition: all 0.2s ease;
-      }
-
-      .upload-btn:hover {
-        background-color: var(--whatsapp-light-gray);
-        transform: translateY(-2px);
-      }
-
-      #fileInput {
-        display: none;
-      }
-
+      
       .chat {
-        flex: 1;
-        padding: 10px 15px;
-        overflow-y: auto;
-        background-color: var(--whatsapp-gray);
-        display: flex;
-        flex-direction: column;
+        background-color: #080808;
       }
-
-      .message {
-        max-width: 80%;
-        margin: 5px 0;
-        padding: 8px 12px;
-        border-radius: 7.5px;
-        position: relative;
-        word-wrap: break-word;
-        line-height: 1.4;
-        font-size: 14.2px;
-        animation: fadeIn 0.3s ease;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      .from-me {
-        background-color: var(--whatsapp-light-green);
-        align-self: flex-end;
-        margin-right: 10px;
-        border-top-right-radius: 0;
-      }
-
+      
       .from-them {
-        background-color: white;
-        align-self: flex-start;
-        margin-left: 10px;
-        border-top-left-radius: 0;
+        background-color: #333;
+        color: #eee;
       }
-
-      .timestamp {
-        display: inline-block;
-        font-size: 0.7em;
-        color: var(--whatsapp-time-gray);
-        margin-left: 8px;
-        float: right;
-        position: relative;
-        bottom: -2px;
-      }
-
-      .sender {
-        font-weight: bold;
-        margin-bottom: 3px;
-        color: var(--whatsapp-teal-green);
-      }
-
-      .date-separator {
-        text-align: center;
-        margin: 15px 0;
-        position: relative;
-      }
-
-      .date-separator::before,
-      .date-separator::after {
-        content: "";
-        position: absolute;
-        top: 50%;
-        width: 30%;
-        height: 1px;
-        background-color: #ccc;
-      }
-
-      .date-separator::before {
-        left: 0;
-      }
-
-      .date-separator::after {
-        right: 0;
-      }
-
-      .date-separator span {
-        background-color: white;
-        padding: 4px 10px;
-        border-radius: 15px;
-        font-size: 12px;
-        color: var(--whatsapp-dark-gray);
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-      }
-
+      
       .notification {
-        background-color: white;
-        padding: 8px;
-        border-radius: 8px;
-        margin: 10px auto;
-        text-align: center;
-        font-size: 12px;
-        color: var(--whatsapp-dark-gray);
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-        max-width: 80%;
+        background-color: #333;
+        color: #ccc;
       }
-
-      .loading {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        color: var(--whatsapp-dark-gray);
+      
+      .date-separator span {
+        background-color: #333;
+        color: #ccc;
       }
-
-      .loading .fa-spinner {
-        font-size: 2rem;
-        margin-bottom: 1rem;
-        color: var(--whatsapp-teal-green);
+      
+      .sender {
+        color: var(--whatsapp-blue);
       }
-
-      .empty-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        color: var(--whatsapp-dark-gray);
-        text-align: center;
+      
+      .document-attachment {
+        background-color: rgba(255,255,255,0.1);
       }
+    }
 
-      .empty-state i {
-        font-size: 48px;
-        margin-bottom: 20px;
-        color: var(--whatsapp-teal-green);
+    /* Mobile responsiveness */
+    @media (max-width: 480px) {
+      .container {
+        height: 100vh;
+        border-radius: 0;
+        margin: 0;
+        padding: 0;
       }
-
-      .empty-state p {
-        margin-bottom: 20px;
-        font-size: 14px;
+      
+      .message {
+        max-width: 85%;
+        font-size: 15px;
       }
-
-      .error-message {
-        color: #d32f2f;
-        text-align: center;
-        padding: 10px;
-        font-size: 14px;
-      }
-
-      /* Dark mode support */
-      @media (prefers-color-scheme: dark) {
-        body {
-          background-color: #0a0a0a;
-        }
-
-        .container {
-          background-color: #111;
-        }
-
-        .chat {
-          background-color: #080808;
-        }
-
-        .from-them {
-          background-color: #333;
-          color: #eee;
-        }
-
-        .notification {
-          background-color: #333;
-          color: #ccc;
-        }
-
-        .date-separator span {
-          background-color: #333;
-          color: #ccc;
-        }
-
-        .sender {
-          color: var(--whatsapp-blue);
-        }
-      }
-
-      /* Mobile responsiveness */
-      @media (max-width: 480px) {
-        .container {
-          height: 100vh;
-          border-radius: 0;
-          margin: 0;
-          padding: 0;
-        }
-
-        .message {
-          max-width: 85%;
-          font-size: 15px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="upload-area">
-        <h2>WhatsApp Chat Renderer</h2>
-        <input type="file" id="fileInput" accept=".txt,.zip" />
-        <label for="fileInput" class="upload-btn">
-          <i class="fas fa-cloud-upload-alt"></i> Choose WhatsApp Export
-        </label>
-        <p style="font-size: 12px; margin-top: 10px">
-          Supports .txt or .zip files exported from WhatsApp
-        </p>
-      </div>
-      <div class="chat" id="chat">
-        <div class="empty-state">
-          <i class="fas fa-comments"></i>
-          <p>Upload a WhatsApp chat export to view messages</p>
-        </div>
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="upload-area">
+      <h2>WhatsApp Chat Renderer</h2>
+      <input type="file" id="fileInput" accept=".txt,.zip" />
+      <label for="fileInput" class="upload-btn">
+        <i class="fas fa-cloud-upload-alt"></i> Choose WhatsApp Export
+      </label>
+      <p style="font-size: 12px; margin-top: 10px;">Supports .txt or .zip files exported from WhatsApp</p>
+    </div>
+    <div class="chat" id="chat">
+      <div class="empty-state">
+        <i class="fas fa-comments"></i>
+        <p>Upload a WhatsApp chat export to view messages</p>
       </div>
     </div>
+  </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const fileInput = document.getElementById("fileInput");
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const fileInput = document.getElementById('fileInput');
 
-        fileInput.addEventListener("change", async function (e) {
-          const file = e.target.files[0];
-          if (!file) return;
+      fileInput.addEventListener('change', async function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
 
-          const chat = document.getElementById("chat");
-          chat.innerHTML =
-            '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Loading chat...</p></div>';
+        const chat = document.getElementById('chat');
+        chat.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Loading chat...</p></div>';
 
-          try {
-            let text = "";
-            if (file.name.endsWith(".zip")) {
-              const zip = await JSZip.loadAsync(file);
-              const txtFileName = Object.keys(zip.files).find((name) =>
-                name.endsWith(".txt")
-              );
-              if (!txtFileName)
-                throw new Error("No WhatsApp chat file found in the ZIP");
-              text = await zip.files[txtFileName].async("string");
-            } else {
-              text = await file.text();
+        try {
+          if (file.name.endsWith('.zip')) {
+            // Handle ZIP file with media attachments
+            const zip = await JSZip.loadAsync(file);
+            const txtFileName = Object.keys(zip.files).find(name => name.endsWith('.txt'));
+            if (!txtFileName) throw new Error('No WhatsApp chat file found in the ZIP');
+            
+            const text = await zip.files[txtFileName].async('string');
+            const messages = parseChat(text);
+            
+            // Create a map of media files for quick lookup
+            const mediaMap = new Map();
+            for (const [filename, file] of Object.entries(zip.files)) {
+              if (!filename.endsWith('.txt') && !file.dir) {
+                const blob = await file.async('blob');
+                mediaMap.set(filename, URL.createObjectURL(blob));
+              }
             }
-
+            
+            renderMessagesWithMedia(messages, mediaMap);
+          } else {
+            // Handle regular text file
+            const text = await file.text();
             const messages = parseChat(text);
             renderMessages(messages);
-          } catch (error) {
-            showError(error.message);
           }
-        });
+        } catch (error) {
+          showError(error.message);
+        }
       });
+    });
 
-      function parseChat(text) {
-        const lines = text.split(/\r?\n/);
-        const messages = [];
-        let currentDate = "";
-        let myName = null;
+    function parseChat(text) {
+      const lines = text.split(/\r?\n/);
+      const messages = [];
+      let currentDate = '';
+      let myName = null;
 
-        const msgPattern =
-          /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}),?\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][mM])?)\s[-\s]\s([^:]+):\s([\s\S]*)$/;
-        const sysPattern =
-          /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}),?\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][mM])?)\s[-\s]\s(.+)$/;
+      const msgPattern = /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}),?\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][mM])?)\s[-\s]\s([^:]+):\s([\s\S]*)$/;
+      const sysPattern = /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}),?\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][mM])?)\s[-\s]\s(.+)$/;
+      const mediaPattern = /(?:image|video|audio|document|file) omitted/;
 
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          if (!line) continue;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line) continue;
 
-          if (
-            line.includes(
-              "Messages to this chat and calls are now secured with end-to-end encryption"
-            )
-          )
-            continue;
+        if (line.includes('Messages to this chat and calls are now secured with end-to-end encryption')) continue;
 
-          const msgMatch = line.match(msgPattern);
-          if (msgMatch) {
-            const [_, date, time, sender, message] = msgMatch;
-            // Detect user's name from the first non-"You" sender
-            if (!myName && sender !== "You") myName = sender;
-            const isYou = sender === "You" || (myName && sender === myName);
-
-            if (date !== currentDate) {
-              currentDate = date;
-              messages.push({ type: "date", date });
-            }
-            messages.push({
-              type: "message",
-              date,
-              time,
-              sender,
-              message,
-              isYou,
-            });
-            continue;
+        const msgMatch = line.match(msgPattern);
+        if (msgMatch) {
+          const [_, date, time, sender, message] = msgMatch;
+          // Detect user's name from the first non-"You" sender
+          if (!myName && sender !== 'You') myName = sender;
+          const isYou = sender === 'You' || (myName && sender === myName);
+          
+          if (date !== currentDate) {
+            currentDate = date;
+            messages.push({ type: 'date', date });
           }
-
-          const sysMatch = line.match(sysPattern);
-          if (sysMatch && !line.includes(":")) {
-            const [_, date, time, message] = sysMatch;
-            if (date !== currentDate) {
-              currentDate = date;
-              messages.push({ type: "date", date });
-            }
-            messages.push({ type: "system", date, time, message });
-            continue;
-          }
-
-          if (
-            messages.length > 0 &&
-            messages[messages.length - 1].type === "message"
-          ) {
-            messages[messages.length - 1].message += "\n" + line;
-          }
+          
+          // Check if this is a media message
+          const isMedia = mediaPattern.test(message);
+          messages.push({ 
+            type: 'message', 
+            date, 
+            time, 
+            sender, 
+            message: isMedia ? message.replace(mediaPattern, '').trim() : message, 
+            isYou,
+            isMedia,
+            mediaFilename: isMedia ? extractMediaFilename(message) : null
+          });
+          continue;
         }
 
-        return messages;
+        const sysMatch = line.match(sysPattern);
+        if (sysMatch && !line.includes(':')) {
+          const [_, date, time, message] = sysMatch;
+          if (date !== currentDate) {
+            currentDate = date;
+            messages.push({ type: 'date', date });
+          }
+          messages.push({ type: 'system', date, time, message });
+          continue;
+        }
+
+        if (messages.length > 0 && messages[messages.length - 1].type === 'message') {
+          messages[messages.length - 1].message += '\n' + line;
+        }
       }
 
-      function renderMessages(messages) {
-        const chat = document.getElementById("chat");
-        chat.innerHTML = "";
+      return messages;
+    }
 
-        if (messages.length === 0) {
-          chat.innerHTML =
-            '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>No messages found in this chat</p></div>';
-          return;
-        }
+    function extractMediaFilename(message) {
+      // This extracts the filename from media messages like:
+      // "image omitted (file: IMG-20200101-WA0000.jpg)"
+      const match = message.match(/file:\s*([^)]+)/);
+      return match ? match[1].trim() : null;
+    }
 
-        messages.forEach((msg) => {
-          if (msg.type === "date") {
-            const el = document.createElement("div");
-            el.className = "date-separator";
-            el.innerHTML = `<span>${formatDate(msg.date)}</span>`;
-            chat.appendChild(el);
-          } else if (msg.type === "system") {
-            const el = document.createElement("div");
-            el.className = "notification";
-            el.innerHTML = `${formatMessageText(
-              msg.message
-            )}<div class="timestamp">${formatTime(msg.time)}</div>`;
-            chat.appendChild(el);
-          } else if (msg.type === "message") {
-            const el = document.createElement("div");
-            el.className = "message " + (msg.isYou ? "from-me" : "from-them");
-            el.innerHTML = `
-            ${
-              msg.isYou
-                ? ""
-                : `<div class="sender">${escapeHtml(msg.sender)}</div>`
-            }
+    function renderMessages(messages) {
+      const chat = document.getElementById('chat');
+      chat.innerHTML = '';
+
+      if (messages.length === 0) {
+        chat.innerHTML = '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>No messages found in this chat</p></div>';
+        return;
+      }
+
+      messages.forEach(msg => {
+        if (msg.type === 'date') {
+          const el = document.createElement('div');
+          el.className = 'date-separator';
+          el.innerHTML = `<span>${formatDate(msg.date)}</span>`;
+          chat.appendChild(el);
+        } else if (msg.type === 'system') {
+          const el = document.createElement('div');
+          el.className = 'notification';
+          el.innerHTML = `${formatMessageText(msg.message)}<div class="timestamp">${formatTime(msg.time)}</div>`;
+          chat.appendChild(el);
+        } else if (msg.type === 'message') {
+          const el = document.createElement('div');
+          el.className = 'message ' + (msg.isYou ? 'from-me' : 'from-them');
+          el.innerHTML = `
+            ${msg.isYou ? '' : `<div class="sender">${escapeHtml(msg.sender)}</div>`}
             <div>${formatMessageText(msg.message)}</div>
             <span class="timestamp">${formatTime(msg.time)}</span>
           `;
-            chat.appendChild(el);
-          }
-        });
-        chat.scrollTop = chat.scrollHeight;
-      }
-
-      function formatDate(dateStr) {
-        const parts = dateStr.split(/[\/\-]/);
-        if (parts.length === 3) {
-          const [day, month, year] = parts;
-          return new Date(
-            `${year.length === 2 ? "20" + year : year}-${month}-${day}`
-          ).toLocaleDateString(undefined, {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-          });
+          chat.appendChild(el);
         }
-        return dateStr;
+      });
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function renderMessagesWithMedia(messages, mediaMap) {
+      const chat = document.getElementById('chat');
+      chat.innerHTML = '';
+
+      if (messages.length === 0) {
+        chat.innerHTML = '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>No messages found in this chat</p></div>';
+        return;
       }
 
-      function formatTime(timeStr) {
-        return timeStr
-          .replace(/:\d{2}(?=\s[APap][mM]?)/, "")
-          .replace(/\s?([APap][mM]?)/, (_, p1) => p1.toLowerCase());
-      }
+      messages.forEach(msg => {
+        if (msg.type === 'date') {
+          const el = document.createElement('div');
+          el.className = 'date-separator';
+          el.innerHTML = `<span>${formatDate(msg.date)}</span>`;
+          chat.appendChild(el);
+        } else if (msg.type === 'system') {
+          const el = document.createElement('div');
+          el.className = 'notification';
+          el.innerHTML = `${formatMessageText(msg.message)}<div class="timestamp">${formatTime(msg.time)}</div>`;
+          chat.appendChild(el);
+        } else if (msg.type === 'message') {
+          const el = document.createElement('div');
+          el.className = 'message ' + (msg.isYou ? 'from-me' : 'from-them');
+          
+          let content = '';
+          if (msg.isMedia && msg.mediaFilename) {
+            const mediaUrl = mediaMap.get(msg.mediaFilename);
+            if (mediaUrl) {
+              if (msg.mediaFilename.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i)) {
+                // Image attachment
+                content += `<div class="media-attachment">
+                  <img src="${mediaUrl}" alt="${msg.mediaFilename}">
+                </div>`;
+              } else if (msg.mediaFilename.match(/\.(mp4|mov|avi|mkv|webm)$/i)) {
+                // Video attachment
+                content += `<div class="media-attachment">
+                  <video controls style="max-width:100%; max-height:300px;">
+                    <source src="${mediaUrl}" type="video/mp4">
+                    Your browser does not support the video tag.
+                  </video>
+                </div>`;
+              } else {
+                // Document/other file attachment
+                content += `<div class="document-attachment">
+                  <i class="fas fa-file-alt"></i>
+                  <a href="${mediaUrl}" download="${msg.mediaFilename}">${msg.mediaFilename}</a>
+                </div>`;
+              }
+            }
+          }
+          
+          if (msg.message) {
+            content += `<div>${formatMessageText(msg.message)}</div>`;
+          }
+          
+          el.innerHTML = `
+            ${msg.isYou ? '' : `<div class="sender">${escapeHtml(msg.sender)}</div>`}
+            ${content}
+            <span class="timestamp">${formatTime(msg.time)}</span>
+          `;
+          
+          chat.appendChild(el);
+        }
+      });
+      chat.scrollTop = chat.scrollHeight;
+    }
 
-      function formatMessageText(text) {
-        text = escapeHtml(text);
-        text = text.replace(
-          /(https?:\/\/[^\s]+)/g,
-          '<a href="$1" target="_blank" style="color: var(--whatsapp-blue); word-break: break-all;">$1</a>'
-        );
-        text = text.replace(/\*(.*?)\*/g, "<strong>$1</strong>");
-        text = text.replace(/_(.*?)_/g, "<em>$1</em>");
-        text = text.replace(/~(.*?)~/g, "<del>$1</del>");
-        text = text.replace(/```([\s\S]*?)```/g, "<code>$1</code>");
-        return text.replace(/\n/g, "<br>");
+    function formatDate(dateStr) {
+      const parts = dateStr.split(/[\/\-]/);
+      if (parts.length === 3) {
+        const [day, month, year] = parts;
+        return new Date(`${year.length === 2 ? '20' + year : year}-${month}-${day}`).toLocaleDateString(undefined, {
+          weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+        });
       }
+      return dateStr;
+    }
 
-      function escapeHtml(unsafe) {
-        return unsafe
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#039;");
-      }
+    function formatTime(timeStr) {
+      return timeStr.replace(/:\d{2}(?=\s[APap][mM]?)/, '').replace(/\s?([APap][mM]?)/, (_, p1) => p1.toLowerCase());
+    }
 
-      function showError(message) {
-        const chat = document.getElementById("chat");
-        chat.innerHTML = `<div class="empty-state">
+    function formatMessageText(text) {
+      text = escapeHtml(text);
+      text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color: var(--whatsapp-blue); word-break: break-all;">$1</a>');
+      text = text.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+      text = text.replace(/_(.*?)_/g, '<em>$1</em>');
+      text = text.replace(/~(.*?)~/g, '<del>$1</del>');
+      text = text.replace(/```([\s\S]*?)```/g, '<code>$1</code>');
+      return text.replace(/\n/g, '<br>');
+    }
+
+    function escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function showError(message) {
+      const chat = document.getElementById('chat');
+      chat.innerHTML = `<div class="empty-state">
         <i class="fas fa-exclamation-triangle"></i>
         <div class="error-message">${message}</div>
         <label for="fileInput" class="upload-btn">
           <i class="fas fa-redo"></i> Try Again
         </label>
       </div>`;
-      }
-    </script>
-  </body>
+    }
+  </script>
+</body>
 </html>
