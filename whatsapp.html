@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WhatsApp Chat Renderer</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --whatsapp-green: #25d366;
+        --whatsapp-light-green: #dcf8c6;
+        --whatsapp-dark-green: #128c7e;
+        --whatsapp-teal-green: #075e54;
+        --whatsapp-blue: #34b7f1;
+        --whatsapp-gray: #ece5dd;
+        --whatsapp-dark-gray: #3c3c3c;
+        --whatsapp-light-gray: #f5f5f5;
+        --whatsapp-message-gray: #e5e5ea;
+        --whatsapp-time-gray: #9a9a9a;
+      }
+
+      body {
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        background-color: #e5ddd5;
+        background-image: url("data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 800 800' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Cpath d='M400 0c-8.837 0-16 7.163-16 16v16c0 8.837 7.163 16 16 16s16-7.163 16-16V16c0-8.837-7.163-16-16-16zm0 752c-8.837 0-16 7.163-16 16v16c0 8.837 7.163 16 16 16s16-7.163 16-16v-16c0-8.837-7.163-16-16-16zM16 384c-8.837 0-16 7.163-16 16v16c0 8.837 7.163 16 16 16h16c8.837 0 16-7.163 16-16v-16c0-8.837-7.163-16-16-16H16zm752 0c-8.837 0-16 7.163-16 16v16c0 8.837 7.163 16 16 16h16c8.837 0 16-7.163 16-16v-16c0-8.837-7.163-16-16-16h-16z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        margin: 0;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: auto;
+        background-color: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+        height: 90vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .upload-area {
+        padding: 20px;
+        text-align: center;
+        border-bottom: 1px solid #ddd;
+        background-color: var(--whatsapp-teal-green);
+        color: white;
+      }
+
+      .upload-btn {
+        background-color: white;
+        color: var(--whatsapp-teal-green);
+        padding: 10px 20px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: 500;
+        display: inline-block;
+        margin-top: 10px;
+        transition: all 0.2s ease;
+      }
+
+      .upload-btn:hover {
+        background-color: var(--whatsapp-light-gray);
+        transform: translateY(-2px);
+      }
+
+      #fileInput {
+        display: none;
+      }
+
+      .chat {
+        flex: 1;
+        padding: 10px 15px;
+        overflow-y: auto;
+        background-color: var(--whatsapp-gray);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .message {
+        max-width: 80%;
+        margin: 5px 0;
+        padding: 8px 12px;
+        border-radius: 7.5px;
+        position: relative;
+        word-wrap: break-word;
+        line-height: 1.4;
+        font-size: 14.2px;
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .from-me {
+        background-color: var(--whatsapp-light-green);
+        align-self: flex-end;
+        margin-right: 10px;
+        border-top-right-radius: 0;
+      }
+
+      .from-them {
+        background-color: white;
+        align-self: flex-start;
+        margin-left: 10px;
+        border-top-left-radius: 0;
+      }
+
+      .timestamp {
+        display: inline-block;
+        font-size: 0.7em;
+        color: var(--whatsapp-time-gray);
+        margin-left: 8px;
+        float: right;
+        position: relative;
+        bottom: -2px;
+      }
+
+      .sender {
+        font-weight: bold;
+        margin-bottom: 3px;
+        color: var(--whatsapp-teal-green);
+      }
+
+      .date-separator {
+        text-align: center;
+        margin: 15px 0;
+        position: relative;
+      }
+
+      .date-separator::before,
+      .date-separator::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        width: 30%;
+        height: 1px;
+        background-color: #ccc;
+      }
+
+      .date-separator::before {
+        left: 0;
+      }
+
+      .date-separator::after {
+        right: 0;
+      }
+
+      .date-separator span {
+        background-color: white;
+        padding: 4px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+        color: var(--whatsapp-dark-gray);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+
+      .notification {
+        background-color: white;
+        padding: 8px;
+        border-radius: 8px;
+        margin: 10px auto;
+        text-align: center;
+        font-size: 12px;
+        color: var(--whatsapp-dark-gray);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        max-width: 80%;
+      }
+
+      .loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--whatsapp-dark-gray);
+      }
+
+      .loading .fa-spinner {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        color: var(--whatsapp-teal-green);
+      }
+
+      .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--whatsapp-dark-gray);
+        text-align: center;
+      }
+
+      .empty-state i {
+        font-size: 48px;
+        margin-bottom: 20px;
+        color: var(--whatsapp-teal-green);
+      }
+
+      .empty-state p {
+        margin-bottom: 20px;
+        font-size: 14px;
+      }
+
+      .error-message {
+        color: #d32f2f;
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+      }
+
+      /* Media attachment styles */
+      .media-container {
+        max-width: 100%;
+        margin: 5px 0;
+      }
+
+      .media-attachment {
+        max-width: 100%;
+        border-radius: 5px;
+        overflow: hidden;
+        background-color: rgba(0, 0, 0, 0.05);
+        display: inline-block;
+      }
+
+      .media-attachment img {
+        max-width: 100%;
+        max-height: 300px;
+        display: block;
+        object-fit: contain;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .media-attachment img:hover {
+        transform: scale(1.02);
+      }
+
+      .document-attachment {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 5px;
+        margin: 5px 0;
+        transition: background-color 0.2s;
+      }
+
+      .document-attachment:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+      }
+
+      .document-icon {
+        font-size: 24px;
+        margin-right: 10px;
+        color: var(--whatsapp-teal-green);
+        min-width: 24px;
+      }
+
+      .document-info {
+        flex-grow: 1;
+        overflow: hidden;
+      }
+
+      .document-name {
+        color: var(--whatsapp-teal-green);
+        text-decoration: none;
+        word-break: break-all;
+        display: block;
+        font-weight: 500;
+      }
+
+      .document-size {
+        font-size: 0.8em;
+        color: var(--whatsapp-time-gray);
+        margin-top: 2px;
+      }
+
+      .download-btn {
+        color: var(--whatsapp-teal-green);
+        margin-left: 10px;
+        cursor: pointer;
+      }
+
+      /* Media modal styles */
+      .media-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.9);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .modal-content {
+        max-width: 90%;
+        max-height: 90%;
+      }
+
+      .modal-content img,
+      .modal-content video {
+        max-width: 100%;
+        max-height: 90vh;
+        display: block;
+      }
+
+      .close-modal {
+        position: absolute;
+        top: 20px;
+        right: 30px;
+        color: white;
+        font-size: 30px;
+        cursor: pointer;
+      }
+
+      /* New styles for improvements */
+      .media-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 5px;
+        margin: 5px 0;
+      }
+
+      .media-thumbnail {
+        width: 100%;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .media-thumbnail:hover {
+        transform: scale(1.05);
+      }
+
+      .gallery-header {
+        font-weight: bold;
+        margin: 10px 0 5px 0;
+        color: var(--whatsapp-teal-green);
+      }
+
+      .media-counter {
+        font-size: 0.8em;
+        color: var(--whatsapp-time-gray);
+        margin-left: 5px;
+      }
+
+      .stats-panel {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        z-index: 1001;
+        max-width: 400px;
+        width: 90%;
+      }
+
+      .stats-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .stats-header h3 {
+        margin: 0;
+        color: var(--whatsapp-teal-green);
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        color: var(--whatsapp-time-gray);
+      }
+
+      .stat-item {
+        margin: 10px 0;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .stat-label {
+        font-weight: 500;
+      }
+
+      .stat-value {
+        color: var(--whatsapp-teal-green);
+      }
+
+      .search-container {
+        display: flex;
+        align-items: center;
+        margin-top: 10px;
+        background: white;
+        border-radius: 20px;
+        padding: 5px 10px;
+      }
+
+      #searchInput {
+        flex-grow: 1;
+        border: none;
+        outline: none;
+        padding: 5px;
+      }
+
+      .search-results {
+        margin: 0 10px;
+        font-size: 0.8em;
+        color: var(--whatsapp-time-gray);
+      }
+
+      .nav-search-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--whatsapp-teal-green);
+      }
+
+      .modal-nav {
+        position: absolute;
+        top: 50%;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        padding: 0 20px;
+        box-sizing: border-box;
+        z-index: 1;
+      }
+
+      .nav-btn {
+        background: rgba(0, 0, 0, 0.5);
+        border: none;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 1.2rem;
+      }
+
+      .stats-btn {
+        background-color: white;
+        color: var(--whatsapp-teal-green);
+        padding: 8px 15px;
+        border-radius: 20px;
+        border: none;
+        cursor: pointer;
+        font-weight: 500;
+        margin-top: 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        display: none; /* Hidden by default */
+      }
+
+      .document-meta {
+        font-size: 0.7em;
+        color: var(--whatsapp-time-gray);
+        margin-top: 2px;
+      }
+
+      .document-list {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .media-gallery-container {
+        margin-bottom: 15px;
+        padding: 10px;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .stats-panel .loading {
+        padding: 20px;
+        text-align: center;
+        color: var(--whatsapp-teal-green);
+      }
+
+      .stats-panel .loading i {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+      }
+
+      .stats-panel .error-message {
+        padding: 20px;
+        text-align: center;
+        color: #d32f2f;
+      }
+
+      .stats-panel .error-message i {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+      }
+
+      .stats-panel .error-message button {
+        background: var(--whatsapp-teal-green);
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 20px;
+        margin-top: 10px;
+        cursor: pointer;
+      }
+
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #0a0a0a;
+        }
+
+        .container {
+          background-color: #111;
+        }
+
+        .chat {
+          background-color: #080808;
+        }
+
+        .from-them {
+          background-color: #333;
+          color: #eee;
+        }
+
+        .notification {
+          background-color: #333;
+          color: #ccc;
+        }
+
+        .date-separator span {
+          background-color: #333;
+          color: #ccc;
+        }
+
+        .sender {
+          color: var(--whatsapp-blue);
+        }
+
+        .document-attachment,
+        .media-attachment {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .document-attachment:hover {
+          background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .search-container {
+          background-color: #333;
+        }
+
+        #searchInput {
+          background-color: #333;
+          color: white;
+        }
+
+        .stats-panel {
+          background-color: #222;
+          color: #eee;
+        }
+
+        .stat-label {
+          color: #eee;
+        }
+
+        .media-gallery-container {
+          background-color: #222;
+        }
+      }
+
+      /* Mobile responsiveness */
+      @media (max-width: 480px) {
+        .container {
+          height: 100vh;
+          border-radius: 0;
+          margin: 0;
+          padding: 0;
+        }
+
+        .message {
+          max-width: 85%;
+          font-size: 15px;
+        }
+
+        .media-attachment img {
+          max-height: 200px;
+        }
+
+        .media-thumbnail {
+          height: 80px;
+        }
+
+        .stats-panel {
+          width: 95%;
+          padding: 15px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="upload-area">
+        <h2>WhatsApp Chat Renderer</h2>
+        <input type="file" id="fileInput" accept=".txt,.zip" />
+        <label for="fileInput" class="upload-btn">
+          <i class="fas fa-cloud-upload-alt"></i> Choose WhatsApp Export
+        </label>
+        <button id="showStats" class="stats-btn">
+          <i class="fas fa-chart-bar"></i> Show Statistics
+        </button>
+        <div
+          class="search-container"
+          id="searchContainer"
+          style="display: none"
+        >
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search messages..."
+          />
+          <button id="searchBtn"><i class="fas fa-search"></i></button>
+          <span id="searchResults" class="search-results"></span>
+          <button id="prevResult" class="nav-search-btn">
+            <i class="fas fa-chevron-up"></i>
+          </button>
+          <button id="nextResult" class="nav-search-btn">
+            <i class="fas fa-chevron-down"></i>
+          </button>
+        </div>
+        <p style="font-size: 12px; margin-top: 10px">
+          Supports .txt or .zip files exported from WhatsApp
+        </p>
+      </div>
+      <div class="chat" id="chat">
+        <div class="empty-state">
+          <i class="fas fa-comments"></i>
+          <p>Upload a WhatsApp chat export to view messages</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Media Modal -->
+    <div id="mediaModal" class="media-modal">
+      <span class="close-modal">&times;</span>
+      <div class="modal-content" id="modalContent"></div>
+    </div>
+
+    <!-- Gallery Modal -->
+    <div id="galleryModal" class="media-modal">
+      <span class="close-modal">&times;</span>
+      <div class="modal-nav">
+        <button id="prevMedia" class="nav-btn">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <button id="nextMedia" class="nav-btn">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+      <div class="modal-content" id="galleryContent"></div>
+    </div>
+
+    <!-- Statistics Panel -->
+    <div id="statsPanel" class="stats-panel">
+      <div class="stats-header">
+        <h3>Chat Statistics</h3>
+        <button id="closeStats" class="close-btn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="stats-content">
+        <div class="stat-item">
+          <span class="stat-label">Total Messages:</span>
+          <span class="stat-value" id="totalMessages">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Your Messages:</span>
+          <span class="stat-value" id="yourMessages">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Their Messages:</span>
+          <span class="stat-value" id="theirMessages">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Media Shared:</span>
+          <span class="stat-value" id="mediaShared">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Most Active Day:</span>
+          <span class="stat-value" id="mostActiveDay">-</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Average Messages/Day:</span>
+          <span class="stat-value" id="avgMessages">0</span>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const fileInput = document.getElementById("fileInput");
+        const mediaModal = document.getElementById("mediaModal");
+        const modalContent = document.getElementById("modalContent");
+        const closeModal = document.querySelector(".close-modal");
+        const searchContainer = document.getElementById("searchContainer");
+        const showStatsBtn = document.getElementById("showStats");
+        const statsPanel = document.getElementById("statsPanel");
+
+        // Global variables
+        let currentMessages = [];
+        let mediaItems = [];
+        let currentGalleryIndex = 0;
+        let searchResults = [];
+        let currentSearchIndex = -1;
+
+        // Initialize buttons
+        showStatsBtn.style.display = "none";
+        searchContainer.style.display = "none";
+
+        // Event listeners
+        showStatsBtn.addEventListener("click", showStatistics);
+        document.getElementById("closeStats").addEventListener("click", () => {
+          statsPanel.style.display = "none";
+        });
+
+        // Search functionality
+        document
+          .getElementById("searchBtn")
+          .addEventListener("click", performSearch);
+        document
+          .getElementById("searchInput")
+          .addEventListener("keyup", (e) => {
+            if (e.key === "Enter") performSearch();
+          });
+        document
+          .getElementById("prevResult")
+          .addEventListener("click", () => navigateSearch(-1));
+        document
+          .getElementById("nextResult")
+          .addEventListener("click", () => navigateSearch(1));
+
+        // Gallery navigation
+        document
+          .getElementById("prevMedia")
+          .addEventListener("click", () => navigateGallery(-1));
+        document
+          .getElementById("nextMedia")
+          .addEventListener("click", () => navigateGallery(1));
+
+        // Close modal when clicking X or outside content
+        closeModal.addEventListener(
+          "click",
+          () => (mediaModal.style.display = "none")
+        );
+        mediaModal.addEventListener("click", (e) => {
+          if (e.target === mediaModal) mediaModal.style.display = "none";
+        });
+
+        fileInput.addEventListener("change", async function (e) {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const chat = document.getElementById("chat");
+          chat.innerHTML =
+            '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Loading chat...</p></div>';
+
+          try {
+            if (file.name.endsWith(".zip")) {
+              // Handle ZIP file with media attachments
+              const zip = await JSZip.loadAsync(file);
+              const txtFileName = Object.keys(zip.files).find((name) =>
+                name.endsWith(".txt")
+              );
+              if (!txtFileName)
+                throw new Error("No WhatsApp chat file found in the ZIP");
+
+              const text = await zip.files[txtFileName].async("string");
+              const messages = parseChat(text);
+
+              // Create a map of media files for quick lookup
+              const mediaMap = new Map();
+              const mediaFolder = txtFileName.split("/").slice(0, -1).join("/");
+
+              // Process all files in the ZIP
+              for (const [relativePath, file] of Object.entries(zip.files)) {
+                if (!file.dir && !relativePath.endsWith(".txt")) {
+                  const fileName = relativePath.split("/").pop();
+                  const fileExtension = fileName.split(".").pop().toLowerCase();
+                  const blob = await file.async("blob");
+
+                  // Create object URL for the file
+                  const objectUrl = URL.createObjectURL(blob);
+
+                  // Store file info including size
+                  mediaMap.set(fileName, {
+                    url: objectUrl,
+                    size: blob.size,
+                    type: fileExtension,
+                  });
+                }
+              }
+
+              renderMessagesWithMedia(messages, mediaMap);
+            } else {
+              // Handle regular text file
+              const text = await file.text();
+              const messages = parseChat(text);
+              renderMessages(messages);
+            }
+
+            // Show controls after successful load
+            showStatsBtn.style.display = "inline-block";
+            searchContainer.style.display = "flex";
+          } catch (error) {
+            showError(error.message);
+            showStatsBtn.style.display = "none";
+            searchContainer.style.display = "none";
+          }
+        });
+
+        function collectMediaItems(messages, mediaMap) {
+          mediaItems = [];
+          messages.forEach((msg) => {
+            if (
+              msg.isMedia &&
+              msg.mediaFilename &&
+              mediaMap.has(msg.mediaFilename)
+            ) {
+              const mediaInfo = mediaMap.get(msg.mediaFilename);
+              mediaItems.push({
+                url: mediaInfo.url,
+                type: mediaInfo.type,
+                filename: msg.mediaFilename,
+                date: msg.date,
+                time: msg.time,
+                sender: msg.sender,
+              });
+            }
+          });
+        }
+
+        function renderMediaGallery() {
+          if (mediaItems.length === 0) return;
+
+          const imageItems = mediaItems.filter((item) =>
+            item.type.match(/jpg|jpeg|png|gif|bmp|webp/)
+          );
+          const videoItems = mediaItems.filter((item) =>
+            item.type.match(/mp4|mov|avi|mkv/)
+          );
+          const docItems = mediaItems.filter(
+            (item) =>
+              !item.type.match(/jpg|jpeg|png|gif|bmp|webp|mp4|mov|avi|mkv/)
+          );
+
+          let galleryHTML = "";
+
+          if (imageItems.length > 0) {
+            galleryHTML += `<div class="gallery-header">Photos <span class="media-counter">${imageItems.length}</span></div>`;
+            galleryHTML += '<div class="media-gallery">';
+            imageItems.forEach((item, index) => {
+              galleryHTML += `
+                <img src="${item.url}" class="media-thumbnail" 
+                     onclick="openGalleryModal(${index}, 'image')" 
+                     alt="${item.filename}">`;
+            });
+            galleryHTML += "</div>";
+          }
+
+          if (videoItems.length > 0) {
+            galleryHTML += `<div class="gallery-header">Videos <span class="media-counter">${videoItems.length}</span></div>`;
+            galleryHTML += '<div class="media-gallery">';
+            videoItems.forEach((item, index) => {
+              galleryHTML += `
+                <video class="media-thumbnail" onclick="openGalleryModal(${
+                  index + imageItems.length
+                }, 'video')">
+                  <source src="${item.url}" type="video/mp4">
+                </video>`;
+            });
+            galleryHTML += "</div>";
+          }
+
+          if (docItems.length > 0) {
+            galleryHTML += `<div class="gallery-header">Documents <span class="media-counter">${docItems.length}</span></div>`;
+            galleryHTML += '<div class="document-list">';
+            docItems.forEach((item) => {
+              const fileIcon = getFileIcon(item.filename);
+              galleryHTML += `
+                <div class="document-attachment">
+                  <i class="fas ${fileIcon} document-icon"></i>
+                  <div class="document-info">
+                    <a href="${item.url}" download="${
+                item.filename
+              }" class="document-name">${item.filename}</a>
+                    <div class="document-meta">${formatDate(
+                      item.date
+                    )} • ${formatTime(item.time)} • ${item.sender}</div>
+                  </div>
+                </div>`;
+            });
+            galleryHTML += "</div>";
+          }
+
+          const galleryContainer = document.createElement("div");
+          galleryContainer.className = "media-gallery-container";
+          galleryContainer.innerHTML = galleryHTML;
+          document.getElementById("chat").prepend(galleryContainer);
+        }
+
+        function showStatistics() {
+          if (!currentMessages || currentMessages.length === 0) {
+            alert("Please load a WhatsApp chat first");
+            return;
+          }
+
+          // Show loading state
+          statsPanel.innerHTML = `
+            <div class="loading">
+              <i class="fas fa-spinner fa-spin"></i>
+              <p>Calculating statistics...</p>
+            </div>
+          `;
+          statsPanel.style.display = "block";
+
+          // Calculate in background to prevent UI freeze
+          setTimeout(() => {
+            try {
+              const stats = {
+                total: 0,
+                yours: 0,
+                theirs: 0,
+                media: 0,
+                days: {},
+                uniqueDates: new Set(),
+              };
+
+              // Count messages
+              currentMessages.forEach((msg) => {
+                if (msg.type === "message") {
+                  stats.total++;
+                  msg.isYou ? stats.yours++ : stats.theirs++;
+                  if (msg.isMedia) stats.media++;
+                  if (msg.date) {
+                    stats.days[msg.date] = (stats.days[msg.date] || 0) + 1;
+                    stats.uniqueDates.add(msg.date);
+                  }
+                }
+              });
+
+              // Find most active day
+              let mostActiveDay = "";
+              let maxMessages = 0;
+              for (const day in stats.days) {
+                if (stats.days[day] > maxMessages) {
+                  maxMessages = stats.days[day];
+                  mostActiveDay = day;
+                }
+              }
+
+              // Calculate averages
+              const avgMessagesPerDay =
+                stats.uniqueDates.size > 0
+                  ? (stats.total / stats.uniqueDates.size).toFixed(1)
+                  : 0;
+
+              // Update UI
+              statsPanel.innerHTML = `
+                <div class="stats-header">
+                  <h3>Chat Statistics</h3>
+                  <button id="closeStats" class="close-btn"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="stats-content">
+                  <div class="stat-item">
+                    <span class="stat-label">Total Messages:</span>
+                    <span class="stat-value">${stats.total}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Your Messages:</span>
+                    <span class="stat-value">${stats.yours}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Their Messages:</span>
+                    <span class="stat-value">${stats.theirs}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Media Shared:</span>
+                    <span class="stat-value">${stats.media}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Most Active Day:</span>
+                    <span class="stat-value">${
+                      mostActiveDay
+                        ? `${formatDate(
+                            mostActiveDay
+                          )} (${maxMessages} messages)`
+                        : "N/A"
+                    }</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Average Messages/Day:</span>
+                    <span class="stat-value">${avgMessagesPerDay}</span>
+                  </div>
+                </div>
+              `;
+
+              // Re-attach close button event
+              document
+                .getElementById("closeStats")
+                .addEventListener("click", () => {
+                  statsPanel.style.display = "none";
+                });
+            } catch (error) {
+              statsPanel.innerHTML = `
+                <div class="error-message">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <p>Error calculating statistics</p>
+                  <button onclick="showStatistics()">Try Again</button>
+                </div>
+              `;
+            }
+          }, 100);
+        }
+
+        function performSearch() {
+          const query = document
+            .getElementById("searchInput")
+            .value.trim()
+            .toLowerCase();
+          if (!query) return;
+
+          searchResults = [];
+          const messages = document.querySelectorAll(".message");
+
+          messages.forEach((msgEl, index) => {
+            const text = msgEl.textContent.toLowerCase();
+            if (text.includes(query)) {
+              searchResults.push(msgEl);
+            }
+          });
+
+          if (searchResults.length > 0) {
+            currentSearchIndex = 0;
+            highlightSearchResult(currentSearchIndex);
+            document.getElementById("searchResults").textContent = `${
+              currentSearchIndex + 1
+            }/${searchResults.length}`;
+          } else {
+            document.getElementById("searchResults").textContent = "No results";
+          }
+        }
+
+        function highlightSearchResult(index) {
+          // Remove previous highlights
+          searchResults.forEach((el) => {
+            el.style.backgroundColor = "";
+          });
+
+          if (index >= 0 && index < searchResults.length) {
+            const result = searchResults[index];
+            result.style.backgroundColor = "rgba(255, 255, 0, 0.3)";
+            result.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }
+
+        function navigateSearch(direction) {
+          if (searchResults.length === 0) return;
+
+          currentSearchIndex += direction;
+          if (currentSearchIndex < 0)
+            currentSearchIndex = searchResults.length - 1;
+          if (currentSearchIndex >= searchResults.length)
+            currentSearchIndex = 0;
+
+          highlightSearchResult(currentSearchIndex);
+          document.getElementById("searchResults").textContent = `${
+            currentSearchIndex + 1
+          }/${searchResults.length}`;
+        }
+
+        function navigateGallery(direction) {
+          currentGalleryIndex += direction;
+          if (currentGalleryIndex < 0)
+            currentGalleryIndex = mediaItems.length - 1;
+          if (currentGalleryIndex >= mediaItems.length) currentGalleryIndex = 0;
+
+          const item = mediaItems[currentGalleryIndex];
+          openGalleryModal(
+            currentGalleryIndex,
+            item.type.match(/video/) ? "video" : "image"
+          );
+        }
+
+        function openGalleryModal(index, type) {
+          currentGalleryIndex = index;
+          const item = mediaItems[index];
+          const modal = document.getElementById("galleryModal");
+          const content = document.getElementById("galleryContent");
+
+          content.innerHTML = "";
+          if (type === "image") {
+            content.innerHTML = `<img src="${item.url}" alt="${item.filename}">`;
+          } else if (type === "video") {
+            content.innerHTML = `
+              <video controls autoplay>
+                <source src="${item.url}" type="video/mp4">
+              </video>`;
+          }
+
+          modal.style.display = "flex";
+        }
+
+        function parseChat(text) {
+          const lines = text.split(/\r?\n/);
+          const messages = [];
+          let currentDate = "";
+          let myName = null;
+
+          const msgPattern =
+            /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}),?\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][mM])?)\s[-\s]\s([^:]+):\s([\s\S]*)$/;
+          const sysPattern =
+            /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}),?\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][mM])?)\s[-\s]\s(.+)$/;
+          const mediaPattern = /(?:image|video|audio|document|file) omitted/;
+
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (!line) continue;
+
+            if (
+              line.includes(
+                "Messages to this chat and calls are now secured with end-to-end encryption"
+              )
+            )
+              continue;
+
+            const msgMatch = line.match(msgPattern);
+            if (msgMatch) {
+              const [_, date, time, sender, message] = msgMatch;
+              // Detect user's name from the first non-"You" sender
+              if (!myName && sender !== "You") myName = sender;
+              const isYou = sender === "You" || (myName && sender === myName);
+
+              if (date !== currentDate) {
+                currentDate = date;
+                messages.push({ type: "date", date });
+              }
+
+              // Check if this is a media message
+              const isMedia = mediaPattern.test(message);
+              messages.push({
+                type: "message",
+                date,
+                time,
+                sender,
+                message: isMedia ? "" : message, // Don't show "<media omitted>" text
+                isYou,
+                isMedia,
+                mediaFilename: isMedia ? extractMediaFilename(line) : null,
+              });
+              continue;
+            }
+
+            const sysMatch = line.match(sysPattern);
+            if (sysMatch && !line.includes(":")) {
+              const [_, date, time, message] = sysMatch;
+              if (date !== currentDate) {
+                currentDate = date;
+                messages.push({ type: "date", date });
+              }
+              messages.push({ type: "system", date, time, message });
+              continue;
+            }
+
+            if (
+              messages.length > 0 &&
+              messages[messages.length - 1].type === "message"
+            ) {
+              messages[messages.length - 1].message += "\n" + line;
+            }
+          }
+
+          return messages;
+        }
+
+        function extractMediaFilename(line) {
+          // Extract filename from lines like:
+          // "12/31/23, 11:59 PM - John Doe: image omitted (file: IMG-20201231-WA0000.jpg)"
+          const match = line.match(/file:\s*([^)]+)/i);
+          if (match) {
+            return match[1].trim();
+          }
+
+          // Try to extract from lines like:
+          // "12/31/23, 11:59 PM - John Doe: document omitted (file attached)"
+          const filenameMatch = line.match(
+            /[^/\\]+\.(jpg|jpeg|png|gif|bmp|webp|mp4|mov|avi|mkv|pdf|docx?|xlsx?|pptx?|txt|zip|rar)/i
+          );
+          if (filenameMatch) {
+            return filenameMatch[0];
+          }
+
+          return null;
+        }
+
+        function renderMessages(messages) {
+          currentMessages = messages;
+          const chat = document.getElementById("chat");
+          chat.innerHTML = "";
+
+          if (messages.length === 0) {
+            chat.innerHTML =
+              '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>No messages found in this chat</p></div>';
+            return;
+          }
+
+          messages.forEach((msg) => {
+            if (msg.type === "date") {
+              const el = document.createElement("div");
+              el.className = "date-separator";
+              el.innerHTML = `<span>${formatDate(msg.date)}</span>`;
+              chat.appendChild(el);
+            } else if (msg.type === "system") {
+              const el = document.createElement("div");
+              el.className = "notification";
+              el.innerHTML = `${formatMessageText(
+                msg.message
+              )}<div class="timestamp">${formatTime(msg.time)}</div>`;
+              chat.appendChild(el);
+            } else if (msg.type === "message") {
+              const el = document.createElement("div");
+              el.className = "message " + (msg.isYou ? "from-me" : "from-them");
+              el.innerHTML = `
+              ${
+                msg.isYou
+                  ? ""
+                  : `<div class="sender">${escapeHtml(msg.sender)}</div>`
+              }
+              <div>${formatMessageText(msg.message)}</div>
+              <span class="timestamp">${formatTime(msg.time)}</span>
+            `;
+              chat.appendChild(el);
+            }
+          });
+          chat.scrollTop = chat.scrollHeight;
+        }
+
+        function renderMessagesWithMedia(messages, mediaMap) {
+          currentMessages = messages;
+          collectMediaItems(messages, mediaMap);
+          const chat = document.getElementById("chat");
+          chat.innerHTML = "";
+
+          if (messages.length === 0) {
+            chat.innerHTML =
+              '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>No messages found in this chat</p></div>';
+            return;
+          }
+
+          renderMediaGallery();
+
+          messages.forEach((msg) => {
+            if (msg.type === "date") {
+              const el = document.createElement("div");
+              el.className = "date-separator";
+              el.innerHTML = `<span>${formatDate(msg.date)}</span>`;
+              chat.appendChild(el);
+            } else if (msg.type === "system") {
+              const el = document.createElement("div");
+              el.className = "notification";
+              el.innerHTML = `${formatMessageText(
+                msg.message
+              )}<div class="timestamp">${formatTime(msg.time)}</div>`;
+              chat.appendChild(el);
+            } else if (msg.type === "message") {
+              const el = document.createElement("div");
+              el.className = "message " + (msg.isYou ? "from-me" : "from-them");
+
+              let content = "";
+              if (msg.isMedia && msg.mediaFilename) {
+                const mediaInfo = mediaMap.get(msg.mediaFilename);
+                if (mediaInfo) {
+                  const { url, size, type } = mediaInfo;
+
+                  if (type.match(/jpg|jpeg|png|gif|bmp|webp/)) {
+                    // Image attachment
+                    content += `
+                    <div class="media-container">
+                      <div class="media-attachment" onclick="openMediaModal('${url}', 'image')">
+                        <img src="${url}" alt="${msg.mediaFilename}">
+                      </div>
+                    </div>
+                  `;
+                  } else if (type.match(/mp4|mov|avi|mkv/)) {
+                    // Video attachment
+                    content += `
+                    <div class="media-container">
+                      <div class="media-attachment" onclick="openMediaModal('${url}', 'video')">
+                        <video controls style="max-width:100%; max-height:300px;">
+                          <source src="${url}" type="video/mp4">
+                          Your browser does not support the video tag.
+                        </video>
+                      </div>
+                    </div>
+                  `;
+                  } else {
+                    // Document/other file attachment
+                    const fileIcon = getFileIcon(msg.mediaFilename);
+                    content += `
+                    <div class="document-attachment">
+                      <i class="fas ${fileIcon} document-icon"></i>
+                      <div class="document-info">
+                        <a href="${url}" download="${
+                      msg.mediaFilename
+                    }" class="document-name">${msg.mediaFilename}</a>
+                        <div class="document-size">${formatFileSize(size)}</div>
+                      </div>
+                      <a href="${url}" download="${
+                      msg.mediaFilename
+                    }" class="download-btn">
+                        <i class="fas fa-download"></i>
+                      </a>
+                    </div>
+                  `;
+                  }
+                } else {
+                  // Media file not found in ZIP
+                  content += `<div><i>Media not available: ${msg.mediaFilename}</i></div>`;
+                }
+              }
+
+              if (msg.message) {
+                content += `<div>${formatMessageText(msg.message)}</div>`;
+              }
+
+              el.innerHTML = `
+              ${
+                msg.isYou
+                  ? ""
+                  : `<div class="sender">${escapeHtml(msg.sender)}</div>`
+              }
+              ${content}
+              <span class="timestamp">${formatTime(msg.time)}</span>
+            `;
+
+              chat.appendChild(el);
+            }
+          });
+          chat.scrollTop = chat.scrollHeight;
+        }
+
+        function getFileIcon(filename) {
+          const extension = filename.split(".").pop().toLowerCase();
+          switch (extension) {
+            case "pdf":
+              return "fa-file-pdf";
+            case "doc":
+            case "docx":
+              return "fa-file-word";
+            case "xls":
+            case "xlsx":
+              return "fa-file-excel";
+            case "ppt":
+            case "pptx":
+              return "fa-file-powerpoint";
+            case "zip":
+            case "rar":
+            case "7z":
+              return "fa-file-archive";
+            case "mp3":
+            case "wav":
+            case "ogg":
+              return "fa-file-audio";
+            case "jpg":
+            case "jpeg":
+            case "png":
+            case "gif":
+            case "bmp":
+              return "fa-file-image";
+            case "mp4":
+            case "mov":
+            case "avi":
+            case "mkv":
+              return "fa-file-video";
+            default:
+              return "fa-file-alt";
+          }
+        }
+
+        function formatDate(dateStr) {
+          const parts = dateStr.split(/[\/\-]/);
+          if (parts.length === 3) {
+            const [day, month, year] = parts;
+            return new Date(
+              `${year.length === 2 ? "20" + year : year}-${month}-${day}`
+            ).toLocaleDateString(undefined, {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            });
+          }
+          return dateStr;
+        }
+
+        function formatTime(timeStr) {
+          return timeStr
+            .replace(/:\d{2}(?=\s[APap][mM]?)/, "")
+            .replace(/\s?([APap][mM]?)/, (_, p1) => p1.toLowerCase());
+        }
+
+        function formatMessageText(text) {
+          text = escapeHtml(text);
+          text = text.replace(
+            /(https?:\/\/[^\s]+)/g,
+            '<a href="$1" target="_blank" style="color: var(--whatsapp-blue); word-break: break-all;">$1</a>'
+          );
+          text = text.replace(/\*(.*?)\*/g, "<strong>$1</strong>");
+          text = text.replace(/_(.*?)_/g, "<em>$1</em>");
+          text = text.replace(/~(.*?)~/g, "<del>$1</del>");
+          text = text.replace(/```([\s\S]*?)```/g, "<code>$1</code>");
+          return text.replace(/\n/g, "<br>");
+        }
+
+        function escapeHtml(unsafe) {
+          return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        }
+
+        function formatFileSize(bytes) {
+          if (bytes === 0) return "0 Bytes";
+          const k = 1024;
+          const sizes = ["Bytes", "KB", "MB", "GB"];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          return (
+            parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+          );
+        }
+
+        function showError(message) {
+          const chat = document.getElementById("chat");
+          chat.innerHTML = `<div class="empty-state">
+          <i class="fas fa-exclamation-triangle"></i>
+          <div class="error-message">${message}</div>
+          <label for="fileInput" class="upload-btn">
+            <i class="fas fa-redo"></i> Try Again
+          </label>
+        </div>`;
+        }
+
+        // Make these functions available globally
+        window.openMediaModal = function (mediaUrl, mediaType) {
+          const mediaModal = document.getElementById("mediaModal");
+          const modalContent = document.getElementById("modalContent");
+          modalContent.innerHTML = "";
+
+          if (mediaType.match(/image/)) {
+            modalContent.innerHTML = `<img src="${mediaUrl}" alt="Enlarged media">`;
+          } else if (mediaType.match(/video/)) {
+            modalContent.innerHTML = `
+            <video controls autoplay style="max-width:100%; max-height:90vh;">
+              <source src="${mediaUrl}" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+          `;
+          }
+          mediaModal.style.display = "flex";
+        };
+
+        window.openGalleryModal = openGalleryModal;
+        window.showStatistics = showStatistics;
+        window.formatFileSize = formatFileSize;
+      });
+    </script>
+  </body>
+</html>
